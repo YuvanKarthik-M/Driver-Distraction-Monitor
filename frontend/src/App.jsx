@@ -34,17 +34,55 @@ export default function App() {
   runningRef.current = running;
   connectedRef.current = connected;
 
-  // Backend connection (once).
+  // Backend connection. Reconnects by itself if it drops (idle timeout,
+  // background tab, phone sleeping, Render waking up).
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
-    ws.onmessage = (e) => {
-      waitingRef.current = false;
-      if (runningRef.current) setData(JSON.parse(e.data));
+    let ws, retryTimer, closed = false;
+
+    function connect() {
+      if (closed) return;
+      if (ws && (ws.readyState === 0 || ws.readyState === 1)) return; // already connecting/open
+      ws = new WebSocket(WS_URL);
+      const mine = ws;
+      wsRef.current = mine;
+      mine.onopen = () => {
+        setConnected(true);
+        waitingRef.current = false; // a frame lost with the old connection must not block new ones
+        calibratingRef.current = true; // a new connection starts with a fresh calibration
+      };
+      mine.onclose = () => {
+        setConnected(false);
+        waitingRef.current = false;
+        if (!closed) retryTimer = setTimeout(connect, 2000);
+      };
+      mine.onerror = () => mine.close();
+      mine.onmessage = (e) => {
+        waitingRef.current = false;
+        if (runningRef.current) setData(JSON.parse(e.data));
+      };
+    }
+
+    connect();
+
+    // Small message every 20 s so idle connections are not closed while monitoring is stopped.
+    const pingTimer = setInterval(() => {
+      if (ws && ws.readyState === 1) ws.send("ping");
+    }, 20000);
+
+    const wake = () => {
+      if (document.visibilityState === "visible") connect();
     };
-    return () => ws.close();
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("online", connect);
+
+    return () => {
+      closed = true;
+      clearTimeout(retryTimer);
+      clearInterval(pingTimer);
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("online", connect);
+      if (ws) ws.close();
+    };
   }, []);
 
   // Camera + frame sending. Runs only while monitoring is on.

@@ -5,7 +5,7 @@ const LABELS = {
 };
 
 export default function StatusPanel({ data, connected, paused }) {
-  let label = "Waiting for the backend";
+  let label = "Connecting to the backend…";
   let tone = "idle";
   if (paused) {
     label = "Monitoring stopped";
@@ -29,7 +29,7 @@ export default function StatusPanel({ data, connected, paused }) {
         <dt>Eye openness (EAR)</dt>
         <dd>{data ? data.ear : "-"}</dd>
         <dt>Backend</dt>
-        <dd>{connected ? "Connected" : "Not connected"}</dd>
+        <dd>{connected ? "Connected" : "Reconnecting…"}</dd>
       </dl>
     </section>
   );
