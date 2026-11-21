@@ -1,0 +1,40 @@
+:root { font-family: "Segoe UI", system-ui, sans-serif; color: #1c2430; background: #f2f4f7; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.6rem; margin: 0 0 16px; }
+h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+.video-wrap { border: 4px solid transparent; border-radius: 10px; overflow: hidden; background: #000; }
+.video-wrap.alert { border-color: #d92d20; }
+video { display: block; width: 100%; transform: scaleX(-1); }
+.panel, .log { background: #fff; border-radius: 10px; padding: 16px; }
+.log { margin-top: 16px; }
+.status { font-size: 1.3rem; font-weight: 600; margin: 0 0 16px; }
+.status.ok { color: #067647; }
+.status.bad { color: #d92d20; }
+.status.idle { color: #667085; }
+dl { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; margin: 0; }
+dt { color: #667085; }
+dd { margin: 0; font-variant-numeric: tabular-nums; }
+table { width: 100%; border-collapse: collapse; }
+td { padding: 6px 0; border-bottom: 1px solid #eaecf0; }
+.muted { color: #667085; margin: 0; }
+.error { background: #fef3f2; color: #b42318; padding: 10px 12px; border-radius: 8px; }
+.top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.top h1 { margin: 0; }
+.alarm-btn { border: 1px solid #98a2b3; background: #fff; color: #1c2430; padding: 8px 14px; border-radius: 8px; font: inherit; cursor: pointer; }
+.alarm-btn.on { background: #067647; border-color: #067647; color: #fff; }
+.alarm-btn:focus-visible { outline: 2px solid #1c2430; outline-offset: 2px; }
+.actions { display: flex; gap: 8px; }
+.alarm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.side { display: flex; flex-direction: column; gap: 16px; }
+.summary { background: #fff; border-radius: 10px; padding: 16px; }
+.summary-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.summary-head h2 { margin: 0; }
+.link-btn { border: 0; background: none; color: #475467; font: inherit; text-decoration: underline; cursor: pointer; }
+.video-wrap { position: relative; aspect-ratio: 4 / 3; }
+video { height: 100%; object-fit: cover; }
+.paused { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #d0d5dd; font-size: 1.1rem; background: #000; }
+.note { color: #667085; font-size: 0.85rem; margin-top: 16px; }
