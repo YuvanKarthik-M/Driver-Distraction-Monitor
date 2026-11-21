@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 
@@ -14,7 +15,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 
 def new_state():
-    return {"calib": [], "base": (0.0, 0.0), "ready": False,
+    return {"calib": [], "calib_start": None, "base": (0.0, 0.0), "ready": False,
             "closed_since": None, "away_since": None}
 
 
@@ -29,8 +30,11 @@ def analyse(r, s):
                 "status": "looking_away" if (away and s["ready"]) else "ok"}
 
     if not s["ready"]:
+        if s["calib_start"] is None:
+            s["calib_start"] = now
         s["calib"].append((r["yaw"], r["pitch"]))
-        if len(s["calib"]) >= config.CALIBRATION_FRAMES:
+        if (now - s["calib_start"] >= config.CALIBRATION_SECONDS
+                and len(s["calib"]) >= config.CALIBRATION_MIN_FRAMES):
             s["base"] = tuple(np.mean(s["calib"], axis=0))
             s["ready"] = True
         return {"face": True, "calibrating": True, "yaw": 0, "pitch": 0,
@@ -79,7 +83,9 @@ async def ws(websocket: WebSocket):
             frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
             if frame is None:
                 continue
-            await websocket.send_text(json.dumps(analyse(detector.process(frame), state)))
+            # Run the heavy detection in a worker thread so the server stays responsive.
+            result = await asyncio.get_running_loop().run_in_executor(None, detector.process, frame)
+            await websocket.send_text(json.dumps(analyse(result, state)))
     except WebSocketDisconnect:
         pass
     finally:
