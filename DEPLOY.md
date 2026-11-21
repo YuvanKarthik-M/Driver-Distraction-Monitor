@@ -1,26 +1,25 @@
 # Deploying
 
-Backend on Render, frontend on Vercel. Deploy the backend first, because the frontend needs its URL.
+Backend on Render (Docker), frontend on Vercel. Deploy the backend first, because the frontend needs its URL.
 
 ## 0. Before pushing to GitHub
-- Make sure `backend/models/face_landmarker.task` exists (it is downloaded the first time you run the backend locally) and is committed, so Render does not download it on every restart.
-- Push the whole `driver-monitor` folder to one GitHub repo.
+- Make sure `backend/models/face_landmarker.task` exists (it is downloaded the first time you run the backend locally) and is committed.
+- Push the whole `driver-monitor` folder to one GitHub repo. `backend/Dockerfile` must be included.
 
-## 1. Backend on Render (Web Service)
+## 1. Backend on Render (Web Service, Docker)
+MediaPipe needs system libraries (`libGLESv2`) that Render's plain Python runtime does not have, so the backend runs in Docker.
+
 | Setting | Value |
 |---|---|
+| Language / Runtime | Docker |
 | Root Directory | `backend` |
-| Runtime | Python 3 |
-| Build Command | `pip install -r requirements.txt` |
-| Start Command | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
-| Environment variable | `PYTHON_VERSION` = `3.12.7` (or another version you tested) |
+| Dockerfile Path | `./Dockerfile` (default) |
+| Build / Start Command | leave empty (the Dockerfile handles both) |
+| Instance Type | Free |
+
+No `PYTHON_VERSION` variable is needed; the Dockerfile uses Python 3.12.
 
 When it is live, open `https://YOUR-APP.onrender.com/` in a browser. You should see `{"status":"ok"}`.
-
-If the logs show `libGL.so.1` errors, change the Build Command to:
-```
-pip install -r requirements.txt && pip uninstall -y opencv-python opencv-contrib-python && pip install --force-reinstall --no-deps opencv-contrib-python-headless
-```
 
 ## 2. Frontend on Vercel
 | Setting | Value |
@@ -34,5 +33,5 @@ pip install -r requirements.txt && pip uninstall -y opencv-python opencv-contrib
 Note: `wss://` (not `ws://`), and the value ends with `/ws`. Vite reads the variable at build time, so after changing it, redeploy the frontend.
 
 ## 3. Checks
-- Open the Vercel link and allow the camera. The status panel should say "Connected".
+- Open the Vercel link and allow the camera. The status panel should say "Connected" and then show your status.
 - Free Render sleeps after about 15 minutes. Open the backend URL once before a demo to wake it up.
