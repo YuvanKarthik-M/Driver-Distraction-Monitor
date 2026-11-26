@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import config
 from detectors.face_detector import FaceDetector
+from detectors.hand_detector import HandDetector
 from detectors.phone_detector import PhoneDetector
 
 app = FastAPI()
@@ -18,26 +19,29 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 def new_state():
     return {"calib": [], "calib_start": None, "base": (0.0, 0.0), "ready": False,
             "closed_since": None, "away_since": None,
-            "phone_last_seen": None, "phone_since": None, "frames": 0}
+            "phone_seen": None, "phone_since": None,
+            "hand_seen": None, "hand_since": None, "frames": 0}
 
 
-def phone_active(s, phone_obs, now):
-    """phone_obs: True/False for a frame where detection ran, None when it was skipped.
+def held_for(s, name, observed, now, hold, need):
+    """True once `name` has been present for `need` seconds.
 
-    A phone counts as present if it was seen at any point in the last PHONE_HOLD_SECONDS,
-    so a phone that the detector only catches now and then (for example near the ear)
-    does not keep resetting the timer.
+    `observed` is True/False for a frame where detection ran, None when it was skipped.
+    Something seen at any point in the last `hold` seconds counts as present, so a detector
+    that only catches it now and then does not keep resetting the timer.
     """
-    if phone_obs:
-        s["phone_last_seen"] = now
-    seen = s["phone_last_seen"] is not None and now - s["phone_last_seen"] <= config.PHONE_HOLD_SECONDS
-    s["phone_since"] = (s["phone_since"] or now) if seen else None
-    return bool(s["phone_since"]) and now - s["phone_since"] > config.PHONE_SECONDS
+    if observed:
+        s[name + "_seen"] = now
+    seen = s[name + "_seen"] is not None and now - s[name + "_seen"] <= hold
+    s[name + "_since"] = (s[name + "_since"] or now) if seen else None
+    return bool(s[name + "_since"]) and now - s[name + "_since"] > need
 
 
-def analyse(r, s, phone_obs=None):
+def analyse(r, s, phone_obs=None, hand_obs=None):
     now = time.time()
-    phone = phone_active(s, phone_obs, now)
+    phone = held_for(s, "phone", phone_obs, now, config.PHONE_HOLD_SECONDS, config.PHONE_SECONDS)
+    hand = held_for(s, "hand", hand_obs, now, config.HAND_HOLD_SECONDS, config.HAND_SECONDS)
+    phone = phone or (config.HAND_EAR_ENABLED and hand)  # visible phone, or hand held at the ear
 
     if r is None:  # no face in frame counts as looking away
         s["closed_since"] = None
@@ -95,12 +99,21 @@ async def ws(websocket: WebSocket):
         phone_det = PhoneDetector(config.PHONE_CONFIDENCE)
     except Exception as e:  # the app still works without phone detection
         print("Phone detection disabled:", e)
+    hand_det = None
+    if config.HAND_EAR_ENABLED:
+        try:
+            hand_det = HandDetector(config.HAND_EAR_DISTANCE)
+        except Exception as e:
+            print("Hand-at-ear detection disabled:", e)
     state = new_state()
 
-    def work(frame, run_phone):
+    def work(frame, run_detect):
         face = detector.process(frame)
-        phone_obs = phone_det.detect(frame) if (phone_det and run_phone) else None
-        return face, phone_obs
+        phone_obs = phone_det.detect(frame) if (phone_det and run_detect) else None
+        hand_obs = None
+        if hand_det and run_detect and face is not None:
+            hand_obs = hand_det.near_face_side(frame, face["geo"])
+        return face, phone_obs, hand_obs
 
     try:
         while True:
@@ -120,12 +133,14 @@ async def ws(websocket: WebSocket):
             run_phone = state["frames"] % config.PHONE_EVERY_N_FRAMES == 0
             state["frames"] += 1
             # Run the heavy detection in a worker thread so the server stays responsive.
-            face, phone_obs = await asyncio.get_running_loop().run_in_executor(
+            face, phone_obs, hand_obs = await asyncio.get_running_loop().run_in_executor(
                 None, work, frame, run_phone)
-            await websocket.send_text(json.dumps(analyse(face, state, phone_obs)))
+            await websocket.send_text(json.dumps(analyse(face, state, phone_obs, hand_obs)))
     except WebSocketDisconnect:
         pass
     finally:
         detector.close()
         if phone_det:
             phone_det.close()
+        if hand_det:
+            hand_det.close()

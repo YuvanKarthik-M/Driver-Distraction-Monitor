@@ -78,7 +78,15 @@ class FaceDetector:
             self.smooth = (a * yaw + (1 - a) * self.smooth[0],
                            a * pitch + (1 - a) * self.smooth[1])
         yaw, pitch = self.smooth
-        return {"yaw": float(yaw), "pitch": float(pitch), "ear": float(ear)}
+        # Face geometry in pixels, used to check whether a hand is beside the face.
+        left, right = xy(234), xy(454)
+        geo = {
+            "edges": [tuple(left), tuple(right)],
+            "width": float(np.linalg.norm(left - right)),
+            "eye_y": float((xy(33)[1] + xy(263)[1]) / 2),
+            "chin_y": float(xy(152)[1]),
+        }
+        return {"yaw": float(yaw), "pitch": float(pitch), "ear": float(ear), "geo": geo}
 
     def close(self):
         self.landmarker.close()
