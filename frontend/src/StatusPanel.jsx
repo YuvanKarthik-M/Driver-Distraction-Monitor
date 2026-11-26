@@ -2,6 +2,7 @@ const LABELS = {
   ok: "Attentive",
   looking_away: "Looking away",
   drowsy: "Eyes closed",
+  phone: "Using phone",
 };
 
 export default function StatusPanel({ data, connected, paused }) {

@@ -7,7 +7,7 @@ import useAlarm from "./useAlarm.js";
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000/ws";
 const EMPTY = {
   monitoredMs: 0, awayMs: 0, closedMs: 0,
-  awayCount: 0, closedCount: 0, longestMs: 0, runMs: 0,
+  awayCount: 0, closedCount: 0, phoneMs: 0, phoneCount: 0, longestMs: 0, runMs: 0,
 };
 
 export default function App() {
@@ -138,6 +138,7 @@ export default function App() {
     acc.current.runMs = 0;
     if (cur === "looking_away") acc.current.awayCount += 1;
     if (cur === "drowsy") acc.current.closedCount += 1;
+    if (cur === "phone") acc.current.phoneCount += 1;
     if (cur !== "ok") {
       setEvents((ev) => [{ time: new Date().toLocaleTimeString(), status: cur }, ...ev].slice(0, 50));
     }
@@ -158,6 +159,7 @@ export default function App() {
         const st = lastStatus.current;
         if (st === "looking_away") a.awayMs += dt;
         if (st === "drowsy") a.closedMs += dt;
+        if (st === "phone") a.phoneMs += dt;
         if (st !== "ok") {
           a.runMs += dt;
           a.longestMs = Math.max(a.longestMs, a.runMs);

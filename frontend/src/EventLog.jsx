@@ -1,4 +1,4 @@
-const LABELS = { looking_away: "Looking away", drowsy: "Eyes closed" };
+const LABELS = { looking_away: "Looking away", drowsy: "Eyes closed", phone: "Using phone" };
 
 export default function EventLog({ events }) {
   return (

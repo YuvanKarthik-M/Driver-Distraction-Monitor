@@ -14,8 +14,8 @@ export default function useAlarm(active, enabled, status) {
     if (ctx.state === "suspended") ctx.resume();
     if (!active) return;
 
-    // Higher pitch for closed eyes, lower for looking away.
-    const freq = status === "drowsy" ? 1000 : 700;
+    // Different pitch per alert: closed eyes highest, phone middle, looking away lowest.
+    const freq = status === "drowsy" ? 1000 : status === "phone" ? 850 : 700;
 
     const beep = () => {
       const osc = ctx.createOscillator();

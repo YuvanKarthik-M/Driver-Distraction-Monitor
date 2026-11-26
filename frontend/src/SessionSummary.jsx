@@ -9,7 +9,7 @@ function fmt(ms) {
 const pct = (part, whole) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
 export default function SessionSummary({ stats, running, onReset }) {
-  const distracted = stats.awayMs + stats.closedMs;
+  const distracted = stats.awayMs + stats.closedMs + stats.phoneMs;
   const attentive = Math.max(stats.monitoredMs - distracted, 0);
   const total = stats.monitoredMs;
 
@@ -30,6 +30,8 @@ export default function SessionSummary({ stats, running, onReset }) {
         <dd>{stats.awayCount}x, {fmt(stats.awayMs)}</dd>
         <dt>Eyes closed</dt>
         <dd>{stats.closedCount}x, {fmt(stats.closedMs)}</dd>
+        <dt>Phone use</dt>
+        <dd>{stats.phoneCount}x, {fmt(stats.phoneMs)}</dd>
         <dt>Longest distraction</dt>
         <dd>{fmt(stats.longestMs)}</dd>
       </dl>
